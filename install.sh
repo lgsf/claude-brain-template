@@ -15,13 +15,14 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_SOURCE="$SCRIPT_DIR/.claude"
+# GitHub repository
+GITHUB_REPO="lgsf/claude-brain-template"
+GITHUB_BRANCH="main"
 
 # Default target
 TARGET_DIR="${1:-.}"
 INSTALL_DIR="$TARGET_DIR/.claude"
+TEMP_DIR="/tmp/claude-brain-$$"
 
 # Banner
 echo -e "${CYAN}"
@@ -51,9 +52,17 @@ fi
 
 echo -e "${BLUE}▶${NC} Installing Claude Brain System..."
 
+# Download from GitHub
+echo "  → Downloading from GitHub..."
+mkdir -p "$TEMP_DIR"
+curl -sSL "https://github.com/${GITHUB_REPO}/archive/refs/heads/${GITHUB_BRANCH}.tar.gz" | tar xz -C "$TEMP_DIR"
+
 # Copy brain structure
 echo "  → Creating directory structure..."
-cp -r "$INSTALL_SOURCE" "$TARGET_DIR/"
+cp -r "$TEMP_DIR/claude-brain-template-${GITHUB_BRANCH}/.claude" "$TARGET_DIR/"
+
+# Cleanup temp directory
+rm -rf "$TEMP_DIR"
 
 # Initialize state files
 echo "  → Initializing state management..."
