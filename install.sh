@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# 🧠 Claude Brain System - Quick Installer
-# Version: 2.0
-# One-command installation into any project
+# 🧠 Claude Brain System - Smart Installer
+# Version: 2.1
+# Intelligently integrates with existing projects
 
 set -e
 
@@ -19,15 +19,16 @@ BOLD='\033[1m'
 GITHUB_REPO="lgsf/claude-brain-template"
 GITHUB_BRANCH="main"
 
-# Default target
+# Default target (current directory or first argument)
 TARGET_DIR="${1:-.}"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"  # Convert to absolute path
 INSTALL_DIR="$TARGET_DIR/.claude"
 TEMP_DIR="/tmp/claude-brain-$$"
 
 # Banner
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║     🧠 ${BOLD}CLAUDE BRAIN INSTALLER${NC}${CYAN} - SUPERCHARGED EDITION        ║"
+echo "║     🧠 ${BOLD}CLAUDE BRAIN INSTALLER${NC}${CYAN} - SMART EDITION             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}\n"
 
@@ -37,43 +38,164 @@ if [ ! -d "$TARGET_DIR" ]; then
     exit 1
 fi
 
-# Check if already installed
-if [ -d "$INSTALL_DIR/brain" ]; then
-    echo -e "${YELLOW}⚠️  Brain system already installed in $TARGET_DIR${NC}"
-    read -p "Reinstall? Existing data will be backed up (y/n): " CONFIRM
-    if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
-        BACKUP_DIR="${INSTALL_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
-        mv "$INSTALL_DIR" "$BACKUP_DIR"
-        echo -e "${GREEN}✅ Backed up to $BACKUP_DIR${NC}"
-    else
+echo -e "${BLUE}▶${NC} Target directory: ${BOLD}$TARGET_DIR${NC}"
+
+# Check for existing installation
+EXISTING_FILES=()
+if [ -f "$TARGET_DIR/CLAUDE.md" ]; then
+    EXISTING_FILES+=("CLAUDE.md")
+fi
+if [ -d "$INSTALL_DIR" ]; then
+    EXISTING_FILES+=(".claude directory")
+fi
+
+if [ ${#EXISTING_FILES[@]} -gt 0 ]; then
+    echo -e "${YELLOW}⚠️  Found existing Claude files:${NC}"
+    for file in "${EXISTING_FILES[@]}"; do
+        echo "    • $file"
+    done
+    echo -e "${CYAN}The installer will preserve your existing files and only add missing components.${NC}"
+    read -p "Continue with smart integration? (y/n): " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Installation cancelled.${NC}"
         exit 0
     fi
 fi
 
-echo -e "${BLUE}▶${NC} Installing Claude Brain System..."
+echo -e "\n${BLUE}▶${NC} Installing Claude Brain System..."
 
 # Download from GitHub
-echo "  → Downloading from GitHub..."
+echo "  → Downloading latest version from GitHub..."
 mkdir -p "$TEMP_DIR"
 curl -sSL "https://github.com/${GITHUB_REPO}/archive/refs/heads/${GITHUB_BRANCH}.tar.gz" | tar xz -C "$TEMP_DIR"
+DOWNLOAD_DIR="$TEMP_DIR/claude-brain-template-${GITHUB_BRANCH}"
 
-# Copy brain structure
-echo "  → Creating directory structure..."
-cp -r "$TEMP_DIR/claude-brain-template-${GITHUB_BRANCH}/.claude" "$TARGET_DIR/"
+# Smart installation
+echo "  → Installing components..."
 
-# Cleanup temp directory
-rm -rf "$TEMP_DIR"
+# 1. Handle .claude directory
+if [ ! -d "$INSTALL_DIR" ]; then
+    echo "    • Creating .claude directory structure"
+    cp -r "$DOWNLOAD_DIR/.claude" "$TARGET_DIR/"
+else
+    echo "    • Merging with existing .claude directory"
+    
+    # Copy missing directories
+    for dir in brain/context brain/memory brain/intelligence project commands scripts hooks templates rules library; do
+        if [ ! -d "$INSTALL_DIR/$dir" ]; then
+            echo "      - Adding $dir"
+            mkdir -p "$INSTALL_DIR/$dir"
+            if [ -d "$DOWNLOAD_DIR/.claude/$dir" ]; then
+                cp -r "$DOWNLOAD_DIR/.claude/$dir"/* "$INSTALL_DIR/$dir/" 2>/dev/null || true
+            fi
+        fi
+    done
+    
+    # Always update scripts and hooks (but backup existing)
+    if [ -d "$INSTALL_DIR/scripts" ]; then
+        echo "      - Updating scripts (backing up existing)"
+        cp -r "$INSTALL_DIR/scripts" "$INSTALL_DIR/scripts.backup.$(date +%Y%m%d_%H%M%S)"
+        cp -r "$DOWNLOAD_DIR/.claude/scripts"/* "$INSTALL_DIR/scripts/"
+    fi
+    
+    if [ -d "$INSTALL_DIR/hooks" ]; then
+        echo "      - Updating hooks (backing up existing)"
+        cp -r "$INSTALL_DIR/hooks" "$INSTALL_DIR/hooks.backup.$(date +%Y%m%d_%H%M%S)"
+        cp -r "$DOWNLOAD_DIR/.claude/hooks"/* "$INSTALL_DIR/hooks/"
+    fi
+    
+    # Copy 00-README.md if missing
+    if [ ! -f "$INSTALL_DIR/00-README.md" ]; then
+        echo "      - Adding master README"
+        cp "$DOWNLOAD_DIR/.claude/00-README.md" "$INSTALL_DIR/"
+    fi
+fi
 
-# Initialize state files
+# 2. Handle CLAUDE.md
+if [ ! -f "$TARGET_DIR/CLAUDE.md" ]; then
+    echo "    • Creating CLAUDE.md"
+    cat > "$TARGET_DIR/CLAUDE.md" << 'EOF'
+# CLAUDE.md
+
+This file provides guidance to Claude Code when working with this repository.
+
+## Project Overview
+[Describe your project here]
+
+## Important Context
+- Project type: [Web app, CLI tool, Library, etc.]
+- Main technologies: [React, Node.js, Python, etc.]
+- Key dependencies: [List important packages]
+
+## Development Commands
+- `npm start` - Start development server
+- `npm test` - Run tests
+- `npm build` - Build for production
+
+## Project Structure
+```
+src/
+├── components/     # UI components
+├── services/       # Business logic
+└── utils/          # Helper functions
+```
+
+## Coding Standards
+- Use TypeScript for type safety
+- Follow ESLint rules
+- Write tests for new features
+
+## Claude Brain System
+This project uses the Claude Brain System for intelligent assistance.
+- Checkpoints: Automatic state preservation
+- Todo tracking: Integrated task management
+- Memory: Self-learning capabilities
+
+See `.claude/00-README.md` for complete documentation.
+
+---
+*Generated by Claude Brain Installer - Customize this file for your project*
+EOF
+else
+    echo "    • CLAUDE.md exists - preserving your version"
+    
+    # Add brain system note if not present
+    if ! grep -q "Claude Brain System" "$TARGET_DIR/CLAUDE.md"; then
+        echo -e "${YELLOW}      - Adding Brain System reference to CLAUDE.md${NC}"
+        echo "" >> "$TARGET_DIR/CLAUDE.md"
+        echo "## Claude Brain System" >> "$TARGET_DIR/CLAUDE.md"
+        echo "This project now uses the Claude Brain System for intelligent assistance." >> "$TARGET_DIR/CLAUDE.md"
+        echo "- Checkpoints: Automatic state preservation" >> "$TARGET_DIR/CLAUDE.md"
+        echo "- Todo tracking: Integrated task management" >> "$TARGET_DIR/CLAUDE.md"
+        echo "- Memory: Self-learning capabilities" >> "$TARGET_DIR/CLAUDE.md"
+        echo "" >> "$TARGET_DIR/CLAUDE.md"
+        echo "See \`.claude/00-README.md\` for complete documentation." >> "$TARGET_DIR/CLAUDE.md"
+    fi
+fi
+
+# 3. Initialize state files (only if missing)
 echo "  → Initializing state management..."
-cat > "$INSTALL_DIR/brain/context/state/current-state.json" << 'EOF'
+
+# Create necessary directories
+mkdir -p "$INSTALL_DIR/brain/context/state"
+mkdir -p "$INSTALL_DIR/brain/context/checkpoints"
+mkdir -p "$INSTALL_DIR/brain/memory"
+mkdir -p "$INSTALL_DIR/project/tasks"
+
+# Initialize current-state.json if missing
+if [ ! -f "$INSTALL_DIR/brain/context/state/current-state.json" ]; then
+    echo "    • Creating initial state"
+    cat > "$INSTALL_DIR/brain/context/state/current-state.json" << EOF
 {
   "session": {
-    "id": "init-session",
-    "start_time": "DATE_PLACEHOLDER",
-    "last_update": "DATE_PLACEHOLDER",
+    "id": "init-$(date +%Y%m%d-%H%M%S)",
+    "start_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "last_update": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
     "focus": "Initial setup",
-    "critical_context": []
+    "critical_context": [
+      "Claude Brain System installed",
+      "Ready for intelligent assistance"
+    ]
   },
   "todos": {
     "in_progress": [],
@@ -86,7 +208,7 @@ cat > "$INSTALL_DIR/brain/context/state/current-state.json" << 'EOF'
     "last_tool": null,
     "tool_count": 0,
     "files_touched": [],
-    "current_task": "Setup complete"
+    "current_task": "System initialization"
   },
   "today": {
     "files_modified": [],
@@ -94,147 +216,113 @@ cat > "$INSTALL_DIR/brain/context/state/current-state.json" << 'EOF'
     "blockers": []
   },
   "git": {
-    "branch": "main",
+    "branch": "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'main')",
     "uncommitted_count": 0
   },
   "snapshots": {
     "last_checkpoint": null,
     "checkpoint_count": 0,
-    "last_snapshot_time": "DATE_PLACEHOLDER"
+    "last_snapshot_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   },
   "prompt_history": []
 }
 EOF
-
-# Replace date placeholders
-CURRENT_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/DATE_PLACEHOLDER/$CURRENT_DATE/g" "$INSTALL_DIR/brain/context/state/current-state.json"
 else
-    sed -i "s/DATE_PLACEHOLDER/$CURRENT_DATE/g" "$INSTALL_DIR/brain/context/state/current-state.json"
+    echo "    • State file exists - preserved"
 fi
 
-# Create ACTIVE_SESSION.md
-cat > "$INSTALL_DIR/brain/context/ACTIVE_SESSION.md" << EOF
+# Initialize active-todos.json if missing
+if [ ! -f "$INSTALL_DIR/brain/context/active-todos.json" ]; then
+    echo "    • Creating active todos tracker"
+    cat > "$INSTALL_DIR/brain/context/active-todos.json" << EOF
+{
+  "todos": {
+    "in_progress": [],
+    "pending": [],
+    "completed": []
+  },
+  "last_update": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+fi
+
+# Initialize ACTIVE_SESSION.md if missing
+if [ ! -f "$INSTALL_DIR/brain/context/ACTIVE_SESSION.md" ]; then
+    echo "    • Creating active session file"
+    cat > "$INSTALL_DIR/brain/context/ACTIVE_SESSION.md" << EOF
 # ACTIVE SESSION STATE - LIVE CONTEXT
 **Last Update**: $(date +"%Y-%m-%d %H:%M:%S")
-**Brain Version**: 2.0
+**Trigger**: installation
+**Latest Checkpoint**: none
 
 ## SESSION METRICS
 - **Duration**: 0 minutes
 - **Prompts**: 0
 - **Tool Uses**: 0
+- **Files Modified**: 0
 - **Checkpoints**: 0
 
 ## CURRENT FOCUS
-Brain system initialized
+Claude Brain System installed and ready
+
+## ACTIVE TODOS
+None yet
 
 ## RECOVERY INSTRUCTIONS
-If context lost, run: \`/restore\`
-EOF
-
-# Create active-todos.json
-echo '{"todos":{"in_progress":[],"pending":[],"completed":[]},"last_update":"'$CURRENT_DATE'"}' \
-    | jq '.' > "$INSTALL_DIR/brain/context/active-todos.json"
-
-# Create CLAUDE.md if not exists
-if [ ! -f "$TARGET_DIR/CLAUDE.md" ]; then
-    echo "  → Creating CLAUDE.md..."
-    cat > "$TARGET_DIR/CLAUDE.md" << 'EOF'
-# CLAUDE.md
-
-This file provides guidance to Claude Code when working with this repository.
-
-## 🧠 Claude Brain System Active
-
-Your brain system is installed and provides:
-- **Automatic checkpointing** on every prompt
-- **Todo synchronization** between UI and files
-- **State preservation** across sessions
-- **Context recovery** with `/restore`
-
-## Essential Commands
-
-- `/checkpoint` - Manual checkpoint
-- `/restore` - Recover context
-- `/code-review` - Review changes
-- `/bug-fix` - Debug issues
-
-## 🚨 CRITICAL: Todo Management
-**ALWAYS write todos to `.claude/brain/context/active-todos.json` BEFORE using TodoWrite**
-
-This ensures automatic checkpoint creation and state synchronization.
-
-## Quick Recovery
-
-If context is lost:
-1. Run `/restore`
-2. Check `.claude/brain/context/ACTIVE_SESSION.md`
-3. Continue from last checkpoint
+If context lost, run: \`/restore\` or check latest checkpoint
 
 ---
-*Brain System v2.0 Installed*
+*Updated by Claude Brain Installer*
 EOF
 fi
 
-# Set permissions
+# Initialize todo.md if missing
+if [ ! -f "$INSTALL_DIR/project/todo.md" ]; then
+    echo "    • Creating project todo file"
+    cat > "$INSTALL_DIR/project/todo.md" << EOF
+# PROJECT TODO LIST
+
+## In Progress
+
+## Pending
+
+## Completed
+- [x] Install Claude Brain System
+
+---
+*Managed by Claude Brain System*
+EOF
+fi
+
+# 4. Set permissions
 echo "  → Setting permissions..."
-chmod +x "$INSTALL_DIR"/scripts/**/*.sh 2>/dev/null || true
-chmod +x "$INSTALL_DIR"/hooks/**/*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/scripts/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/scripts/core/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/scripts/session/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/scripts/utilities/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/hooks/"*/*.sh 2>/dev/null || true
 
-# Update .gitignore
-if [ -f "$TARGET_DIR/.gitignore" ]; then
-    if ! grep -q "# Claude Brain System" "$TARGET_DIR/.gitignore"; then
-        echo "  → Updating .gitignore..."
-        cat >> "$TARGET_DIR/.gitignore" << 'EOF'
+# 5. Clean up
+echo "  → Cleaning up temporary files..."
+rm -rf "$TEMP_DIR"
 
-# Claude Brain System
-.claude/brain/context/checkpoints/*
-.claude/brain/context/state/current-state.json
-.claude/brain/context/state/*.backup.json
-.claude/brain/context/ACTIVE_SESSION.md
-.claude/brain/context/active-todos.json
-.claude/logs/*
-.claude/settings.local.json
-EOF
-    fi
-fi
-
-# Create initial checkpoint
-echo "  → Creating initial checkpoint..."
-CHECKPOINT_DIR="$INSTALL_DIR/brain/context/checkpoints"
-TIMESTAMP=$(date +%y%m%d_%H%M%S)
-cat > "$CHECKPOINT_DIR/${TIMESTAMP}_init.md" << EOF
-# Initial Checkpoint - Brain System Installed
-
-**Date**: $(date)
-**Version**: 2.0
-**Project**: $TARGET_DIR
-
-## Installation Summary
-- Brain system successfully installed
-- State management initialized
-- Hooks configured
-- Ready for use
-
-## Next Steps
-1. Read CLAUDE.md for project guidelines
-2. Use /checkpoint to save state
-3. Use /restore to recover context
-EOF
-
-echo -e "\n${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║           🎉 ${BOLD}INSTALLATION SUCCESSFUL!${NC} ${GREEN}🎉                    ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}\n"
-
-echo -e "${CYAN}📊 Installation Summary:${NC}"
-echo "  • Location: $INSTALL_DIR"
-echo "  • Status: ${GREEN}ACTIVE${NC}"
-echo "  • Version: 2.0"
-
-echo -e "\n${YELLOW}🚀 Quick Start:${NC}"
-echo "  1. Read ${BOLD}CLAUDE.md${NC} in your project root"
-echo "  2. Your brain system is now active!"
-echo "  3. Every prompt creates an automatic checkpoint"
-
-echo -e "\n${GREEN}Claude Code is now SUPERCHARGED! 🧠⚡${NC}\n"
+# Success message
+echo ""
+echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║                    ✅ INSTALLATION COMPLETE                   ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${CYAN}📁 Installation directory: ${BOLD}$TARGET_DIR${NC}"
+echo ""
+echo -e "${YELLOW}📚 Next steps:${NC}"
+echo "  1. Review ${BOLD}CLAUDE.md${NC} and customize for your project"
+echo "  2. Read ${BOLD}.claude/00-README.md${NC} for complete documentation"
+echo "  3. Start Claude Code and use ${BOLD}/restore${NC} to load context"
+echo ""
+echo -e "${CYAN}🚀 Key features now available:${NC}"
+echo "  • Automatic checkpoints on every interaction"
+echo "  • Todo tracking with ${BOLD}TodoWrite${NC} tool"
+echo "  • Context preservation and recovery"
+echo "  • Self-learning memory system"
+echo ""
+echo -e "${GREEN}Happy coding with Claude Brain! 🧠${NC}"
