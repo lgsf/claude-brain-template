@@ -17,18 +17,32 @@ Claude Brain is a comprehensive intelligence system that supercharges Claude Cod
 - **📊 State Tracking**: Real-time monitoring of all activities
 - **🧬 Self-Learning**: Pattern recognition and optimization
 
-## ⚡ Quick Install (< 2 minutes)
+## ⚡ Quick Install (< 30 seconds)
+
+### One-Command Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/claude-brain-template.git
-
-# Run the installer
-cd claude-brain-template
-./install.sh /path/to/your/project
+curl -sSL https://raw.githubusercontent.com/lgsf/claude-brain-template/main/install.sh | bash
 ```
 
 That's it! Your Claude Code is now SUPERCHARGED! 🎉
+
+### Alternative Methods
+
+**Install to specific directory:**
+```bash
+curl -sSL https://raw.githubusercontent.com/lgsf/claude-brain-template/main/install.sh | bash -s /path/to/project
+```
+
+**Review script before running:**
+```bash
+# Download and review
+curl -O https://raw.githubusercontent.com/lgsf/claude-brain-template/main/install.sh
+cat install.sh
+
+# Run when ready
+bash install.sh
+```
 
 ## 🎯 Core Features
 
